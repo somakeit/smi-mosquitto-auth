@@ -6,7 +6,7 @@
 #include <string.h>
 #include <bcrypt.h>
 
-#define LINE_BUFFER 64
+#define LINE_BUFFER 128
 
 int use_smi_auth = 0;
 int use_password_file_auth = 0;
@@ -136,9 +136,7 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
             }
 
             if (strcmp(file_user_name, username) == 0) {
-                mosquitto_log_printf(MOSQ_LOG_INFO, "user matches");
-                if (strcmp(file_password, password) == 0) {
-                    mosquitto_log_printf(MOSQ_LOG_INFO, "pass matches");
+                if (bcrypt_checkpw(password, file_password) == 0) {
                     return(MOSQ_ERR_SUCCESS);
                 }
                 else {

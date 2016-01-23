@@ -4,7 +4,9 @@ This is an authentication plugin for mosquitto that uses the So Make It members 
 
 Building
 --------
-Put the mosquitto source directory next to this one.
+Dependencies:
+ - Put the mosquitto source directory next to this one.
+ - git submodile init && git submodule update #to get bcrypt library, check for security patches upstream before building.
 <pre>make</pre>
 
 Configuring
