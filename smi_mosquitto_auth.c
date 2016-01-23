@@ -1,34 +1,65 @@
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
+#include <string.h>
+#include <bcrypt.h>
+
+#define LINE_BUFFER 64
+
+int use_smi_auth = 0;
+int use_password_file_auth = 0;
+char *smi_auth_url;
+char *password_file;
+
+int load_option(char auth_option_key[], char auth_option_value[]) {
+    if (strcmp(auth_option_key, "smi_auth_url") == 0) {
+        if (auth_option_value[0] == '\0') {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "SMI Auth Option %s invalid.", auth_option_key);
+            return(1);
+        }
+        use_smi_auth = 1;
+        smi_auth_url = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
+        mosquitto_log_printf(MOSQ_LOG_INFO, "len: %d str: %s", (strlen(auth_option_value) + 1), auth_option_value);
+        strcpy(smi_auth_url, auth_option_value);
+        return(0);
+    }
+    else if (strcmp(auth_option_key, "password_file") == 0) {
+        FILE *f;
+        if (f = fopen(auth_option_value, "r")) {
+            fclose(f);
+            use_password_file_auth = 1;
+            password_file = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
+            strcpy(password_file, auth_option_value);
+            return(0);
+        }
+        else {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Password file %s is not readable or does not exist.", auth_option_value);
+            return(1);
+        }
+    }
+    else {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Unknown SMI Auth Option: %s", auth_option_key);
+        return(1);
+    }
+}
 
 int mosquitto_auth_plugin_version(void) {
     return(MOSQ_AUTH_PLUGIN_VERSION);
 }
 
-/*
- * Function: mosquitto_auth_plugin_init
- *
- * Called after the plugin has been loaded and <mosquitto_auth_plugin_version>
- * has been called. This will only ever be called once and can be used to
- * initialise the plugin.
- *
- * Parameters:
- *
- *	user_data :      The pointer set here will be passed to the other plugin
- *	                 functions. Use to hold connection information for example.
- *	auth_opts :      Pointer to an array of struct mosquitto_auth_opt, which
- *	                 provides the plugin options defined in the configuration file.
- *	auth_opt_count : The number of elements in the auth_opts array.
- *
- * Return value:
- *	Return 0 on success
- *	Return >0 on failure.
- */
 int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth_opts, int auth_opt_count) {
     mosquitto_log_printf(MOSQ_LOG_INFO, "SMI Auth Plugin Loaded.");
     for (int i = 0; i < auth_opt_count ; i++) {
-        mosquitto_log_printf(MOSQ_LOG_INFO, "SMI auth option %s: %s", auth_opts->key, auth_opts->value);
+        int rc;
+        rc = load_option(auth_opts->key, auth_opts->value);
+        if (rc == 0) {
+            mosquitto_log_printf(MOSQ_LOG_INFO, "SMI auth option %s: %s", auth_opts->key, auth_opts->value);
+        }
+        else {
+            return(rc);
+        }
         auth_opts++;
     }
 
@@ -68,7 +99,57 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
  * error.
  */
 int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char *password) {
-    return(MOSQ_ERR_SUCCESS);
+    /* Check the password file first */
+    if (use_password_file_auth) {
+        FILE *f;
+        f = fopen(password_file, "r");
+        if (f == NULL) {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Password file gone!");
+            return(MOSQ_ERR_UNKNOWN);
+        }
+
+        while (1) {
+            char buffer[LINE_BUFFER];
+            char file_user_name[LINE_BUFFER];
+            char file_password[LINE_BUFFER];
+            char *tok;
+
+            if (fgets(buffer, LINE_BUFFER, f) == NULL) break;
+            //chomp
+            strtok(buffer, "\n");
+
+            tok = strtok(buffer, ":");
+            if (tok == NULL) {
+                mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in password file");
+                return(MOSQ_ERR_UNKNOWN);
+            }
+            else {
+                strcpy(file_user_name, tok);
+            }
+            tok = strtok(NULL, ":");
+            if (tok == NULL) {
+                mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in password file");
+                return(MOSQ_ERR_UNKNOWN);
+            }
+            else {
+                strcpy(file_password, tok);
+            }
+
+            if (strcmp(file_user_name, username) == 0) {
+                mosquitto_log_printf(MOSQ_LOG_INFO, "user matches");
+                if (strcmp(file_password, password) == 0) {
+                    mosquitto_log_printf(MOSQ_LOG_INFO, "pass matches");
+                    return(MOSQ_ERR_SUCCESS);
+                }
+                else {
+                    return(MOSQ_ERR_AUTH);
+                }
+            }
+        }
+        return(MOSQ_ERR_AUTH);
+    }
+
+    return(MOSQ_ERR_AUTH);
 }
 
 int mosquitto_auth_psk_key_get(void *user_data, const char *hint, const char *identity, char *key, int max_key_len) {
