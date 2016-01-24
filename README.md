@@ -17,17 +17,17 @@ Configuring
 Put these values in the mosquitto configuration file:
 <pre>
 # So Make It auth plugin
-auth_plugin /home/alan/smi-mosquitto-auth/smi_mosquitto_auth.so
+auth_plugin /path/to/smi_mosquitto_auth.so
 
 # Optional URL to SMI authentication server
-auth_opt_smi_auth_url https://members.somakeit.org.uk/me
+auth_opt_smi_auth_url https://example.com/auth_url
 
 # Optional password file to override SMI auths.
 # Format as per password_file but passwords are hashed with bcrypt.
 auth_opt_password_file /etc/mosquitto/password_file
 
 # Optional acl file to control access to topics
-# Formet for each line must be:
+# Format for each line must be:
 #   user access topic
 # Where: user   = POSIX regex for username
 #        access = one of no,ro,wo,rw
@@ -42,3 +42,8 @@ auth_opt_password_file /etc/mosquitto/password_file
 # .* rw .*
 auth_opt_acl_file /etc/mosquitto/acl_file
 </pre>
+
+Copying
+-------
+Copyright 2016 So Make It Ltd.
+Licensed as GPL2.
