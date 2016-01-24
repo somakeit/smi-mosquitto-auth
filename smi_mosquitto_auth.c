@@ -91,14 +91,6 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
     return(MOSQ_ERR_SUCCESS);
 }
 
-/*
- * Function: mosquitto_auth_unpwd_check
- *
- * Called by the broker when a username/password must be checked. Return
- * MOSQ_ERR_SUCCESS if the user is authenticated, MOSQ_ERR_AUTH if
- * authentication failed, or MOSQ_ERR_UNKNOWN for an application specific
- * error.
- */
 int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char *password) {
     /* Check the password file first */
     if (use_password_file_auth) {
