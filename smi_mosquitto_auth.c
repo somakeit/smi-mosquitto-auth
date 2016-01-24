@@ -22,7 +22,6 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
         }
         use_smi_auth = 1;
         smi_auth_url = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
-        mosquitto_log_printf(MOSQ_LOG_INFO, "len: %d str: %s", (strlen(auth_option_value) + 1), auth_option_value);
         strcpy(smi_auth_url, auth_option_value);
         return(0);
     }
@@ -152,7 +151,6 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
         int request_failed = 0;
         curl_global_init(CURL_GLOBAL_ALL);
         curl = curl_easy_init();
-        mosquitto_log_printf(MOSQ_LOG_INFO, "POST %s to %s", payload, smi_auth_url);
 
         if (curl) {
             curl_easy_setopt(curl, CURLOPT_URL, smi_auth_url);
