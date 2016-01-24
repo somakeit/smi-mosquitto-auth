@@ -15,10 +15,30 @@ Then:
 Configuring
 -----------
 Put these values in the mosquitto configuration file:
-<pre>#So Make It auth plugin
-auth_plugin /path/to/smi_mosquitto_auth.so
-#Optional URL to SMI authentication server
+<pre>
+# So Make It auth plugin
+auth_plugin /home/alan/smi-mosquitto-auth/smi_mosquitto_auth.so
+
+# Optional URL to SMI authentication server
 auth_opt_smi_auth_url https://members.somakeit.org.uk/me
-#Optional password file to override SMI auths, format as per password_file
-#but passwords are encrypted with bcrypt.
-auth_opt_password_file /etc/mosquitto/password_file</pre>
+
+# Optional password file to override SMI auths.
+# Format as per password_file but passwords are hashed with bcrypt.
+auth_opt_password_file /etc/mosquitto/password_file
+
+# Optional acl file to control access to topics
+# Formet for each line must be:
+#   user access topic
+# Where: user   = POSIX regex for username
+#        access = one of no,ro,wo,rw
+#        topic  = POSIC regex for topic
+# The file should contain no extra whitespace.
+# The file is parsed from the top until a matching rule us found.
+# If no match is foud access is disallowed.
+# Eg:
+# alice rw private.*
+# bob rw private.*
+# .* no private.*
+# .* rw .*
+auth_opt_acl_file /etc/mosquitto/acl_file
+</pre>
