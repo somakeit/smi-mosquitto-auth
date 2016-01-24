@@ -5,6 +5,7 @@
 #include <mosquitto_plugin.h>
 #include <string.h>
 #include <bcrypt.h>
+#include <curl/curl.h>
 
 #define LINE_BUFFER 128
 
@@ -144,7 +145,56 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
                 }
             }
         }
-        return(MOSQ_ERR_AUTH);
+    }
+
+    if (use_smi_auth) {
+        //construct POST payload
+        char *payload;
+        payload = (char*)malloc((strlen("email=&password=") + strlen(username) + strlen(password) + 1) * sizeof(char));
+        sprintf(payload, "email=%s&password=%s", username, password);
+
+        //construct the request
+        CURL *curl;
+        CURLcode result;
+        long status_code;
+        int request_failed = 0;
+        curl_global_init(CURL_GLOBAL_ALL);
+        curl = curl_easy_init();
+        mosquitto_log_printf(MOSQ_LOG_INFO, "POST %s to %s", payload, smi_auth_url);
+
+        if (curl) {
+            curl_easy_setopt(curl, CURLOPT_URL, smi_auth_url);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
+
+            //make the request
+            result = curl_easy_perform(curl);
+            if (result != CURLE_OK) {
+                mosquitto_log_printf(MOSQ_LOG_ERR, "Request to auth server failed: %s", curl_easy_strerror(result));
+                request_failed = 1;
+            }
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
+            curl_easy_cleanup(curl);
+        }
+        else {
+             mosquitto_log_printf(MOSQ_LOG_ERR, "Failed to get a curl handle");
+             request_failed = 1;
+        }
+        curl_global_cleanup();
+        free(payload);
+
+        if (request_failed) {
+            return(MOSQ_ERR_UNKNOWN);
+        }
+
+        switch (status_code) {
+            case 200:
+                return(MOSQ_ERR_SUCCESS);
+            case 404:
+                return(MOSQ_ERR_AUTH);
+            default:
+                mosquitto_log_printf(MOSQ_LOG_ERR, "Auth server returned unexpected status: %d", status_code);
+                return(MOSQ_ERR_UNKNOWN);
+        }
     }
 
     return(MOSQ_ERR_AUTH);
