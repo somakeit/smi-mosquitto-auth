@@ -32,6 +32,7 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
     else if (strcmp(auth_option_key, "password_file") == 0) {
         FILE *f;
         if (f = fopen(auth_option_value, "r")) {
+            fclose(f);
             use_password_file_auth = 1;
             password_file = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
             strcpy(password_file, auth_option_value);
@@ -45,6 +46,7 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
     else if (strcmp(auth_option_key, "acl_file") == 0) {
         FILE *f;
         if (f = fopen(auth_option_value, "r")) {
+            fclose(f);
             use_acl_file = 1;
             acl_file = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
             strcpy(acl_file, auth_option_value);
