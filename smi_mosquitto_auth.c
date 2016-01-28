@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
@@ -38,7 +39,7 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
             return(0);
         }
         else {
-            mosquitto_log_printf(MOSQ_LOG_ERR, "Password file %s is not readable or does not exist.", auth_option_value);
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Password file %s is not readable or does not exist: %s", auth_option_value, strerror(errno));
             return(1);
         }
     }
@@ -52,7 +53,7 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
             return(0);
         }
         else {
-            mosquitto_log_printf(MOSQ_LOG_ERR, "Acl file %s is not readable or does not exist.", auth_option_value);
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Acl file %s is not readable or does not exist: %s", auth_option_value, strerror(errno));
         }
     }
     else {
@@ -107,7 +108,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
         FILE *f;
         f = fopen(acl_file, "r");
         if (f == NULL) {
-            mosquitto_log_printf(MOSQ_LOG_ERR, "Acl file gone!");
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Cant open ACL file %s: %s", acl_file, strerror(errno));
             return(MOSQ_ERR_UNKNOWN);
         }
 
@@ -219,7 +220,7 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
         FILE *f;
         f = fopen(password_file, "r");
         if (f == NULL) {
-            mosquitto_log_printf(MOSQ_LOG_ERR, "Password file gone!");
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Can't open password file %s: %s", password_file, strerror(errno));
             return(MOSQ_ERR_UNKNOWN);
         }
 
