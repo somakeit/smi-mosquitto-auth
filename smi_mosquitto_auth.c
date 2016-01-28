@@ -32,7 +32,6 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
     else if (strcmp(auth_option_key, "password_file") == 0) {
         FILE *f;
         if (f = fopen(auth_option_value, "r")) {
-            fclose(f);
             use_password_file_auth = 1;
             password_file = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
             strcpy(password_file, auth_option_value);
@@ -46,7 +45,6 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
     else if (strcmp(auth_option_key, "acl_file") == 0) {
         FILE *f;
         if (f = fopen(auth_option_value, "r")) {
-            fclose(f);
             use_acl_file = 1;
             acl_file = (char*)malloc((strlen(auth_option_value) + 1) * sizeof(char));
             strcpy(acl_file, auth_option_value);
@@ -128,6 +126,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             tok = strtok(buffer, " ");
             if (tok == NULL) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             strcpy(file_user_name, tok);
@@ -135,6 +134,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             tok = strtok(NULL, " ");
             if (tok == NULL) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             strcpy(file_access, tok);
@@ -143,6 +143,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
                 strcmp(file_access, "wo") != 0 &&
                 strcmp(file_access, "rw") != 0) {
                     mosquitto_log_printf(MOSQ_LOG_ERR, "Bad access type in acl file: %s, should be one of: no,ro,wo,rw", file_access);
+                    fclose(f);
                     return(MOSQ_ERR_UNKNOWN);
             }
 
@@ -158,6 +159,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             reti = regcomp(&regex, file_user_name, 0);
             if (reti) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Bad regex in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             reti = regexec(&regex, username, 0, NULL, 0);
@@ -168,6 +170,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             }
             else if (reti) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Regex error in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
 
@@ -175,6 +178,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             reti = regcomp(&regex, file_topic, 0);
             if (reti) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Bad regex in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             reti = regexec(&regex, topic, 0, NULL, 0);
@@ -184,26 +188,31 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
             }
             else if (reti) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Bad regex in acl file.");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
 
             /* By this point the rule concerns the user and the topic. Now apply 
              access type logic and stop parting the rules file. */
             if (strcmp(file_access, "no") == 0) {
+                fclose(f);
                 return(MOSQ_ERR_AUTH);
             }
             else if (access == MOSQ_ACL_READ) {
                 if (strcmp(file_access, "rw") == 0 ||
                     strcmp(file_access, "ro") == 0) {
+                        fclose(f);
                         return(MOSQ_ERR_SUCCESS);
                 }
             }
             else if (access == MOSQ_ACL_WRITE) {
                 if (strcmp(file_access, "rw") == 0 ||
                     strcmp(file_access, "wo") == 0) {
+                        fclose(f);
                         return(MOSQ_ERR_SUCCESS);
                 }
             }
+            fclose(f);
             return(MOSQ_ERR_AUTH);
         }
         fclose(f);
@@ -237,6 +246,7 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
             tok = strtok(buffer, ":");
             if (tok == NULL) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in password file");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             strcpy(file_user_name, tok);
@@ -244,6 +254,7 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
             tok = strtok(NULL, ":");
             if (tok == NULL) {
                 mosquitto_log_printf(MOSQ_LOG_ERR, "Malformed line in password file");
+                fclose(f);
                 return(MOSQ_ERR_UNKNOWN);
             }
             else {
@@ -252,9 +263,11 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
 
             if (strcmp(file_user_name, username) == 0) {
                 if (bcrypt_checkpw(password, file_password) == 0) {
+                    fclose(f);
                     return(MOSQ_ERR_SUCCESS);
                 }
                 else {
+                    fclose(f);
                     return(MOSQ_ERR_AUTH);
                 }
             }
