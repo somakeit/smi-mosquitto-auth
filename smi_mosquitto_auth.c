@@ -96,15 +96,12 @@ int mosquitto_auth_security_cleanup(void *user_data, struct mosquitto_auth_opt *
     return(0);
 }
 
-/*
- * Function: mosquitto_auth_acl_check
- *
- * Called by the broker when topic access must be checked. access will be one
- * of MOSQ_ACL_READ (for subscriptions) or MOSQ_ACL_WRITE (for publish). Return
- * MOSQ_ERR_SUCCESS if access was granted, MOSQ_ERR_ACL_DENIED if access was
- * not granted, or MOSQ_ERR_UNKNOWN for an application specific error.
- */
 int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *username, const char *topic, int access) {
+    //Anonymous access not supported
+    if (username == NULL) {
+        return(MOSQ_ERR_AUTH);
+    }
+
     if (use_acl_file) {
         FILE *f;
         f = fopen(acl_file, "r");
