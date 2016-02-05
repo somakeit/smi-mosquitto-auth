@@ -54,6 +54,7 @@ int load_option(char auth_option_key[], char auth_option_value[]) {
         }
         else {
             mosquitto_log_printf(MOSQ_LOG_ERR, "Acl file %s is not readable or does not exist: %s", auth_option_value, strerror(errno));
+            return(1);
         }
     }
     else {
