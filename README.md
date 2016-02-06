@@ -36,9 +36,9 @@ auth_opt_password_file /etc/mosquitto/password_file
 # The file is parsed from the top until a matching rule us found.
 # If no match is foud access is disallowed.
 # Eg:
-# ^alice$ rw private.*
-# ^bob$ rw private.*
-# .* no private.*
+# ^alice$ rw ^private.*
+# ^bob$ rw ^private.*
+# .* no ^private.*
 # .* rw .*
 auth_opt_acl_file /etc/mosquitto/acl_file
 </pre>
